@@ -47,6 +47,11 @@ module multitap
 	input        P4_UP, P4_DOWN, P4_LEFT, P4_RIGHT, P4_A, P4_B, P4_C, P4_START, P4_MODE, P4_X, P4_Y, P4_Z,
 	input        P5_UP, P5_DOWN, P5_LEFT, P5_RIGHT, P5_A, P5_B, P5_C, P5_START, P5_MODE, P5_X, P5_Y, P5_Z,
 
+	input ANALOG_OPT,
+	input [7:0] P1_ANALOG1,
+	input [7:0] P1_ANALOG2,
+	input [7:0] P1_ANALOG3,
+
 	input        DISK,
 
 	input  [1:0] TEAMPLAYER_EN,

@@ -93,6 +93,11 @@ module system
 	input  [11:0] JOY_5,
 	input   [2:0] MULTITAP,
 
+	input 	     ANALOG_OPT,
+	input  [7:0] JOY_1ANALOG1,
+	input  [7:0] JOY_1ANALOG2,
+	input  [7:0] JOY_1ANALOG3,
+
 	input  [24:0] MOUSE,
 	input   [2:0] MOUSE_OPT,
 	
@@ -583,7 +588,12 @@ multitap multitap
 
 	.MOUSE(MOUSE),
 	.MOUSE_OPT(MOUSE_OPT),
-	
+
+	.ANALOG_OPT(ANALOG_OPT),
+	.P1_ANALOG1(JOY_1ANALOG1),
+	.P1_ANALOG2(JOY_1ANALOG2),
+	.P1_ANALOG3(JOY_1ANALOG3),
+
 	.GUN_OPT(GUN_OPT),
 	.GUN_TYPE(GUN_TYPE),
 	.GUN_SENSOR(GUN_SENSOR),

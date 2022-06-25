@@ -54,6 +54,10 @@ module gen_io
 	input            P1_X,
 	input            P1_Y,
 	input            P1_Z,
+	input[7:0]            P1_ANALOG1,
+	input[7:0]            P1_ANALOG2,
+	input[7:0]            P1_ANALOG3,
+	input            ANALOG_OPT,
 
 	input            P2_UP,
 	input            P2_DOWN,
@@ -117,7 +121,7 @@ always @(posedge RESET or posedge CLK) begin
 				// Read
 				case(A)
 						0: DO <= {EXPORT, PAL, ~DISK, 5'd0};
-						1: DO <= (CTLA & DATA) | (~CTLA & (SER_OPT[0] ? SERJOYSTICK_IN : (MOUSE_OPT[0] ? mdata : PAD1_DO)));
+						1: DO <= (CTLA & DATA) | (~CTLA & (SER_OPT[0] ? SERJOYSTICK_IN : (MOUSE_OPT[0] ? mdata : (ANALOG_OPT ? ANALOG_DO : PAD1_DO))));
 						2: DO <= (CTLB & DATB) | (~CTLB & (GUN_OPT ? GUN_DO : (SER_OPT[1] ? SERJOYSTICK_IN : (MOUSE_OPT[1] ? mdata : PAD2_DO))));
 						3: DO <= R[3] | ~R[6]; // Unconnected port
 				default: DO <= R[A];
@@ -203,6 +207,35 @@ gun_io gun
 	.DI((CTLB & DATB) | ~CTLB),
 	.DO(GUN_DO)
 );
+wire [7:0] ANALOG_DO;
+analog_io analog
+(
+	.RESET(RESET),
+	.CLK(CLK),
+	.CE(CE),
+
+
+	.P_ANALOG1(P1_UP),
+	.P_ANALOG2(P1_DOWN),
+	.P_ANALOG3(P1_LEFT),
+	.P_A(P1_A),
+	.P_B(P1_B),
+	.P_C(P1_C),
+	.P_D(P1_X),
+	.P_AT(P1_UP),
+	.P_BT(P1_DOWN),
+	.P_E1(P1_Y),
+	.P_E2(P1_Z),
+	.P_START(P1_START),
+	.P_SELECT(P1_MODE),
+
+	.SEL(SEL && A == 1),
+	.RNW(RNW),
+	.DIR(~CTLA[6]),
+	.DI(DI[6]),
+	.DO(ANALOG_DO)
+);
+
 
 reg   [8:0] dx,dy;
 reg   [4:0] mdata;
@@ -435,6 +468,90 @@ always @(posedge RESET or posedge CLK) begin
 			jdo[2:0] <= th ? 3'b000 : 3'b011;
 			jth <= 1;
 		end
+	end
+end
+
+endmodule
+
+module analog_io
+(
+   input RESET,
+   input CLK,
+   input CE,
+   
+   
+   input [7:0] P_ANALOG1,
+   input [7:0] P_ANALOG2,
+   input [7:0] P_ANALOG3,
+   input P_A,
+   input P_B,
+   input P_C,
+   input P_D,
+   input P_AT,
+   input P_BT,
+   input P_E1,
+   input P_E2,
+   input P_START,
+   input P_SELECT,
+
+   input SEL,
+   input RNW,
+
+   input DIR,
+   input DI,
+
+   output reg [7:0] DO,
+   output reg       DTACK_N
+);
+
+reg TH;
+reg [2:0] JCNT;
+
+always @(*) begin
+	DO[7:6] = {1'b0,TH};
+	if(TH)
+		if (JCNT == 0)   DO[5:0] = {2'b00,P_A | P_AT, P_B | P_BT, P_C, P_D};
+		else if (JCNT == 1)   DO[5:0] = {2'b00,P_ANALOG2 [3:0]};
+		else if (JCNT == 2)   DO[5:0] = {2'b00,P_ANALOG3 [3:0]};
+		else if (JCNT == 3)   DO[5:0] = {2'b00,P_ANALOG2 [7:4]};
+		else if (JCNT == 4)   DO[5:0] = {2'b00,P_ANALOG3 [7:4]};
+		else   DO[5:0] = {2'b00,P_A,P_B,P_AT,P_BT};
+	else if (JCNT == 0) DO[5:0] = {2'b00,P_E1,P_E2,P_START,P_SELECT};
+	else if (JCNT == 1) DO[5:0] = {2'b00,P_ANALOG1 [3:0]};
+	else if (JCNT == 3) DO[5:0] = {2'b00,P_ANALOG1 [7:4]};
+	//else if (JCNT == 5) DO[5:0] = {2'b00,P_ANALOG1 [3:0]}; -- Unused?
+	else                DO[5:0] = {6'b000000};
+end
+
+always @(posedge RESET or posedge CLK) begin
+	//reg  [7:0] FLTMR;
+
+	reg THd;
+	reg di;
+
+	if(RESET) begin
+		DTACK_N <= 1;
+		TH   <= 0;
+		JCNT <= 0;
+	end
+	else if(CE) begin
+	
+		//if(~&FLTMR) FLTMR <= FLTMR + 1'd1;
+		if(~DIR) begin
+			TH <= di;
+		//	FLTMR <= 0;
+		end
+		//else if(FLTMR == 210) TH <= 1;
+	
+		THd <= TH;
+		if(~THd & TH) JCNT <= JCNT + 1'd1;
+
+		if(~SEL) DTACK_N <= 1;
+		else if(SEL & DTACK_N) begin
+			if(~RNW) di <= DI;
+			DTACK_N <= 0;
+		if(JCNT = 6) JCNT <= 0;
+		end 
 	end
 end
 
